@@ -81,6 +81,29 @@ async function connectDB() {
       res.send(result);
     });
 
+    // Get all queries by email
+    app.get("/queries/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { "posted_by.email": email };
+      // const cursor = queryCollection.find(query);
+
+      const cursor = queryCollection
+        .find(query)
+        .sort({ "posted_by.posted_date": -1 }); // Sort by posted_date descending
+
+      // console.log(req.user.email, req.params.email);
+
+      if (req.user.email !== req.params.email) {
+        return res
+          .status(403)
+          .send({ message: "You are not authorized to view this job" });
+      }
+      // console.log("cookies", req.cookies);
+
+      const results = await cursor.toArray();
+      res.send(results);
+    });
+
     //recommendation API
     app.post("/recommendations", async (req, res) => {
       const recommendations = req.body;
