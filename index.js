@@ -73,6 +73,14 @@ async function connectDB() {
       }
     });
 
+    //Get query by id
+    app.get("/query/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queryCollection.findOne(query);
+      res.send(result);
+    });
+
     //recommendation API
     app.post("/recommendations", async (req, res) => {
       const recommendations = req.body;
