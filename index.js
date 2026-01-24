@@ -7,9 +7,33 @@ const { MongoClient } = require('mongodb');
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
+
+const verifyToken = (req, res, next) => {
+  console.log("inside the verifyToken middleware", req.cookies);
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden" });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 const port = process.env.PORT || 3000;
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
@@ -128,7 +152,7 @@ async function connectDB() {
       res.send(results);
     });
 
-    app.get("/recommendations/user/:email", async (req, res) => {
+    app.get("/recommendations/user/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { "recommended_by.email": email };
       const cursor = recommendationCollection.find(query);
