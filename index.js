@@ -70,7 +70,7 @@ async function connectDB() {
       const results = await cursor.toArray();
       res.send(results);
     });
-    
+
     //query limit
     app.get("/queries-limit", async (req, res) => {
       const limit = parseInt(req.query.limit) || 6;
@@ -82,7 +82,7 @@ async function connectDB() {
       res.send(result);
     });
 
-     //Get all queries sorted by posted_date
+    //Get all queries sorted by posted_date
     app.get("/queries/sort", async (req, res) => {
       try {
         const cursor = queryCollection
@@ -171,6 +171,33 @@ async function connectDB() {
       const query = { _id: new ObjectId(id) };
       const result = await recommendationCollection.deleteOne(query);
       res.send(result);
+    });
+
+
+    //update query recommendationCount
+    app.put("/update-recommendation-count/:queryId", async (req, res) => {
+      const queryId = req.params.queryId;
+
+      try {
+        // Increment the recommendationCount by 1
+        const result = await queryCollection.updateOne(
+          { _id: new ObjectId(queryId) },
+          { $inc: { "posted_by.recommendationCount": 1 } }
+        );
+
+        if (result.modifiedCount > 0) {
+          res
+            .status(200)
+            .send({ message: "Recommendation count updated successfully" });
+        } else {
+          res
+            .status(404)
+            .send({ message: "Query not found or no changes made" });
+        }
+      } catch (error) {
+        console.error("Error updating recommendation count:", error);
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     console.log('Connected to MongoDB');
