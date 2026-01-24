@@ -13,12 +13,59 @@ app.use(express.json());
 
 const port = process.env.PORT || 3000;
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
-
 const client = new MongoClient(mongoUri);
 
 async function connectDB() {
   try {
     await client.connect();
+    const database = client.db("ProdRec");
+    const recommendationCollection = database.collection("recommendations");
+
+    //recommendation API
+    app.post("/recommendations", async (req, res) => {
+      const recommendations = req.body;
+      const result = await recommendationCollection.insertOne(recommendations);
+      res.send(result);
+    });
+
+    app.get("/recommendations", async (req, res) => {
+      const cursor = recommendationCollection.find();
+      const results = await cursor.toArray();
+      res.send(results);
+    });
+
+    app.get("/recommendations/:query_id", async (req, res) => {
+      const query_id = req.params.query_id;
+      const cursor = recommendationCollection
+        .find({
+          "queryInfo.query_id": query_id,
+        })
+        .sort({ "recommended_by.posted_date": -1 });
+      const results = await cursor.toArray();
+      res.send(results);
+    });
+
+    app.get("/recommendations/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "recommended_by.email": email };
+      const cursor = recommendationCollection.find(query);
+      if (req.user.email !== req.params.email) {
+        return res
+          .status(403)
+          .send({ message: "You are not authorized to view this" });
+      }
+      const results = await cursor.toArray();
+      res.send(results);
+    });
+
+
+    app.delete("/recommendations/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await recommendationCollection.deleteOne(query);
+      res.send(result);
+    });
+
     console.log('Connected to MongoDB');
   } catch (err) {
     console.error('MongoDB connection error:', err);
