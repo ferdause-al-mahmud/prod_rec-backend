@@ -46,7 +46,8 @@ async function connectDB() {
       const results = await cursor.toArray();
       res.send(results);
     });
-
+    
+    //query limit
     app.get("/queries-limit", async (req, res) => {
       const limit = parseInt(req.query.limit) || 6;
       const cursor = queryCollection
@@ -55,6 +56,21 @@ async function connectDB() {
         .sort({ "posted_by.posted_date": -1 });
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+     //Get all queries sorted by posted_date
+    app.get("/queries/sort", async (req, res) => {
+      try {
+        const cursor = queryCollection
+          .find()
+          .sort({ "posted_by.posted_date": -1 });
+        const queries = await cursor.toArray();
+
+        res.status(200).send(queries);
+      } catch (error) {
+        console.error("Error fetching queries:", error);
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     //recommendation API
