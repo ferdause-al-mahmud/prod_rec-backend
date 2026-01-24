@@ -33,7 +33,7 @@ async function connectDB() {
       res.send(result);
     });
 
-      // Get all queries
+    // Get all queries
     app.get("/queries", async (req, res) => {
       const search = req.query?.search;
       let query = {};
@@ -47,7 +47,15 @@ async function connectDB() {
       res.send(results);
     });
 
-    
+    app.get("/queries-limit", async (req, res) => {
+      const limit = parseInt(req.query.limit) || 6;
+      const cursor = queryCollection
+        .find()
+        .limit(limit)
+        .sort({ "posted_by.posted_date": -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
     //recommendation API
     app.post("/recommendations", async (req, res) => {
