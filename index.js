@@ -19,7 +19,35 @@ async function connectDB() {
   try {
     await client.connect();
     const database = client.db("ProdRec");
+    const queryCollection = database.collection("queries");
     const recommendationCollection = database.collection("recommendations");
+
+    //-----------------------
+    //Query Api's
+    //------------------------
+
+    // Create a new query
+    app.post("/queries", async (req, res) => {
+      const query = req.body;
+      const result = await queryCollection.insertOne(query);
+      res.send(result);
+    });
+
+      // Get all queries
+    app.get("/queries", async (req, res) => {
+      const search = req.query?.search;
+      let query = {};
+      if (search) {
+        query = { product_name: { $regex: search, $options: "i" } }; // Case-insensitive search
+      }
+      const cursor = queryCollection
+        .find(query)
+        .sort({ "posted_by.posted_date": -1 });
+      const results = await cursor.toArray();
+      res.send(results);
+    });
+
+    
 
     //recommendation API
     app.post("/recommendations", async (req, res) => {
