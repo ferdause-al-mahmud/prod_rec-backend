@@ -59,6 +59,18 @@ async function connectDB() {
         })
         .send({ success: true });
     });
+
+    // Logout
+
+      app.post("/logout", async (req, res) => {
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
     
     //-----------------------
     //Query Api's
