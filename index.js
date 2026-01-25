@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 
@@ -292,6 +292,12 @@ async function connectDB() {
         res.status(500).send({ message: "Server error" });
       }
     });
+
+    //-----------------------
+    // Chatbot Routes
+    //-----------------------
+    const chatbotRoutes = require('./chatbot-routes');
+    app.use('/api/chatbot', chatbotRoutes(queryCollection, recommendationCollection, verifyToken));
 
     console.log('Connected to MongoDB');
   } catch (err) {
