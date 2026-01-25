@@ -45,6 +45,7 @@ async function connectDB() {
     const database = client.db("ProdRec");
     const queryCollection = database.collection("queries");
     const recommendationCollection = database.collection("recommendations");
+    const userCollection = database.collection("users");
 
 
     // jwt
@@ -70,6 +71,88 @@ async function connectDB() {
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
         .send({ success: true });
+    });
+
+    //-----------------------
+    // User Management API
+    //-----------------------
+
+    // Save or check user data
+    app.post("/save-user", async (req, res) => {
+      try {
+        const { email, name, photo } = req.body;
+
+        if (!email) {
+          return res.status(400).send({ message: "Email is required" });
+        }
+
+        // Check if user exists
+        const existingUser = await userCollection.findOne({ email });
+
+        if (existingUser) {
+          // User already exists - return existing user
+          return res.json({
+            success: true,
+            message: "User already exists",
+            isNewUser: false,
+            user: existingUser,
+          });
+        }
+
+        // Create new user document with data from request
+        const newUser = {
+          email: email,
+          name: name || "User",
+          photo: photo || "",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          totalQueries: 0,
+          totalRecommendations: 0,
+        };
+
+        const result = await userCollection.insertOne(newUser);
+
+        res.json({
+          success: true,
+          message: "User saved successfully",
+          isNewUser: true,
+          user: newUser,
+        });
+      } catch (error) {
+        console.error("Error saving user:", error);
+        res.status(500).json({
+          success: false,
+          message: "Error saving user",
+          error: error.message,
+        });
+      }
+    });
+
+    // Get user data
+    app.get("/user/:email", async (req, res) => {
+      try {
+        const { email } = req.params;
+        const user = await userCollection.findOne({ email });
+
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        res.json({
+          success: true,
+          user,
+        });
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({
+          success: false,
+          message: "Error fetching user",
+          error: error.message,
+        });
+      }
     });
 
     //-----------------------
