@@ -62,7 +62,7 @@ async function connectDB() {
 
     // Logout
 
-      app.post("/logout", async (req, res) => {
+    app.post("/logout", async (req, res) => {
       res
         .clearCookie("token", {
           httpOnly: true,
@@ -71,7 +71,7 @@ async function connectDB() {
         })
         .send({ success: true });
     });
-    
+
     //-----------------------
     //Query Api's
     //------------------------
@@ -183,6 +183,14 @@ async function connectDB() {
         updateQuery,
         options
       );
+      res.send(result);
+    });
+
+    //delete a query
+    app.delete("/queries/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queryCollection.deleteOne(query);
       res.send(result);
     });
 
