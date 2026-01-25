@@ -62,7 +62,7 @@ async function connectDB() {
 
     // Logout
 
-      app.post("/logout", async (req, res) => {
+    app.post("/logout", async (req, res) => {
       res
         .clearCookie("token", {
           httpOnly: true,
@@ -71,7 +71,7 @@ async function connectDB() {
         })
         .send({ success: true });
     });
-    
+
     //-----------------------
     //Query Api's
     //------------------------
@@ -153,6 +153,47 @@ async function connectDB() {
       const results = await cursor.toArray();
       res.send(results);
     });
+
+    //update query data
+    app.put("/query/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const query = req.body;
+      const updateQuery = {
+        $set: {
+          query_title: query.query_title,
+          product_name: query.product_name,
+          category: query.category,
+          product_brand: query.product_brand,
+          product_photo: query.product_photo,
+          boycotting_reason: query.boycotting_reason,
+        },
+
+        // posted_by: {
+        //   email: user.email,
+        //   name: user.displayName,
+        //   photo: user.photoURL,
+        //   posted_date: currentDateTime,
+        //   recommendationCount: 0,
+        // },
+      };
+      const result = await queryCollection.updateOne(
+        filter,
+        updateQuery,
+        options
+      );
+      res.send(result);
+    });
+
+    //delete a query
+    app.delete("/queries/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queryCollection.deleteOne(query);
+      res.send(result);
+    });
+
 
     //recommendation API
     app.post("/recommendations", async (req, res) => {
