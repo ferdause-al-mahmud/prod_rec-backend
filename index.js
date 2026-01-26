@@ -376,6 +376,45 @@ async function connectDB() {
       }
     });
 
+    // Get recommendations FOR user's queries FROM OTHER USERS
+    app.get("/recommendations-for-me/:email", verifyToken, async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        // Check authorization
+        if (req.user.email !== req.params.email) {
+          return res
+            .status(403)
+            .send({ message: "You are not authorized to view this" });
+        }
+
+        // Step 1: Get all queries posted by the current user
+        const userQueries = await queryCollection
+          .find({ "posted_by.email": email })
+          .toArray();
+
+        if (userQueries.length === 0) {
+          return res.send([]);
+        }
+
+        // Step 2: Get recommendations related to those queries FROM OTHER USERS
+        const userQueryIds = userQueries.map(q => q._id.toString());
+
+        const recommendations = await recommendationCollection
+          .find({
+            "queryInfo.query_id": { $in: userQueryIds },
+            "recommended_by.email": { $ne: email } // Exclude recommendations from the user themselves
+          })
+          .sort({ "recommended_by.posted_date": -1 })
+          .toArray();
+
+        res.status(200).send(recommendations);
+      } catch (error) {
+        console.error("Error fetching recommendations for user:", error);
+        res.status(500).send({ message: "Server error" });
+      }
+    });
+
     //-----------------------
     // Chatbot Routes
     //-----------------------

@@ -9,10 +9,17 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_API_KEY,
 });
 
-// Get user context from database
 const getUserContext = async (userId, queryCollection, recommendationCollection) => {
     try {
         const userQueries = await queryCollection.find({ "posted_by.email": userId }).toArray();
+        const userQueryIds = userQueries.map(q => q._id.toString());
+        const recommendationsForUserQueries = await recommendationCollection
+            .find({
+                "queryInfo.query_id": { $in: userQueryIds },
+                "recommended_by.email": { $ne: userId }
+            })
+            .toArray();
+
         const userRecommendations = await recommendationCollection
             .find({ "recommended_by.email": userId })
             .toArray();
@@ -22,24 +29,26 @@ const getUserContext = async (userId, queryCollection, recommendationCollection)
             .map(q => `"${q.product_name}" - ${q.query_title}`)
             .join(', ');
 
-        const recentRecommendations = userRecommendations
+        const recentRecommendationsForMe = recommendationsForUserQueries
             .slice(-5)
-            .map(r => `"${r.product_title}" (${r.title})`)
+            .map(r => `"${r.recommendation_product_name}" - ${r.recommendation_title} (by ${r.recommended_by.name})`)
             .join(', ');
 
         return {
             totalQueries: userQueries.length,
-            totalRecommendations: userRecommendations.length,
+            totalRecommendationsReceived: recommendationsForUserQueries.length,
+            totalRecommendationsGiven: userRecommendations.length,
             recentQueries: recentQueries || 'No queries yet',
-            recentRecommendations: recentRecommendations || 'No recommendations yet',
+            recentRecommendationsForMe: recentRecommendationsForMe || 'No recommendations yet',
         };
     } catch (error) {
         console.error('Error fetching user context:', error);
         return {
             totalQueries: 0,
-            totalRecommendations: 0,
+            totalRecommendationsReceived: 0,
+            totalRecommendationsGiven: 0,
             recentQueries: 'Unable to fetch',
-            recentRecommendations: 'Unable to fetch',
+            recentRecommendationsForMe: 'Unable to fetch',
         };
     }
 };
@@ -60,21 +69,23 @@ module.exports = (queryCollection, recommendationCollection, verifyToken) => {
             // Build context-aware prompt
             const systemPrompt = `You are a helpful and friendly product recommendation assistant for the ProdRec platform.
 
-📊 User Information:
+ User Information:
 - Total Queries Asked: ${userContext.totalQueries}
-- Recommendations Received: ${userContext.totalRecommendations}
+- Recommendations Received (from others): ${userContext.totalRecommendationsReceived}
+- Recommendations Given: ${userContext.totalRecommendationsGiven}
 - Recent Queries: ${userContext.recentQueries}
-- Recent Recommendations: ${userContext.recentRecommendations}
+- Recent Recommendations For Me: ${userContext.recentRecommendationsForMe}
 
-🎯 Your Responsibilities:
+ Your Responsibilities:
 1. Help users find the best product recommendations
 2. Guide them through the ProdRec platform features (Add Query, View Recommendations, etc.)
 3. Answer questions about how queries and recommendations work
 4. Provide personalized product suggestions based on their history
 5. Be conversational, friendly, and supportive
 6. Keep responses concise (2-3 sentences max unless asked for more details)
+7. Get data from the recent queries and answer the user with best combination of the product if possible
 
-💡 ProdRec Features to help with:
+ ProdRec Features to help with:
 - Adding queries about products they want recommendations for
 - Viewing recommendations from the community
 - Managing their own queries and recommendations
